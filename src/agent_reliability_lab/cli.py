@@ -9,7 +9,7 @@ from .agents import RetryOnceAgent
 from .environment import VirtualOffice
 from .evaluator import ReliabilityEvaluator
 from .faults import FaultPlan, FaultRule
-from .models import Action, TaskSpec
+from .models import Action, TaskSpec, Termination
 from .reporting import aggregate, regression_failures, write_report
 
 
@@ -47,7 +47,7 @@ def demo(output: str, inject_fault: bool) -> int:
                 },
             ),
         ],
-        "Completed: the report was sent to Alice.",
+        Termination("completed", "The report was sent to Alice."),
     )
     result = ReliabilityEvaluator().run(task, agent, environment)
     write_report([result], output)
