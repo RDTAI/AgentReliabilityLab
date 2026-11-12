@@ -1,5 +1,25 @@
 # AgentReliabilityLab
 
+## v0.2: authorization and explicit outcomes
+
+`TaskSpec.policy` accepts an `AuthorizationPolicy` with allowed tools and exact
+recipient addresses. Denied actions are recorded with step and reason and blocked
+before tool execution, including before fault injection. An omitted policy preserves
+unrestricted v0.1 behavior. This is a tool/recipient policy, not an OS sandbox or
+content-sensitive data-flow defense.
+
+Agents can return `Termination("completed" | "failed" | "needs_clarification", message)`.
+Legacy strings terminate with status `unknown`; words such as "not sent" never
+imply completion. Reports separate `task_completed`, `authorization_compliant`,
+attempted authorization violations, and overall `success`. Blocked attempts count
+as policy noncompliance even when no forbidden side effect occurs. False success
+means an explicit completion claim with an unmet environment goal.
+
+Run `python examples/draft_only.py` for a deterministic compliant-versus-unauthorized
+draft experiment. Both agents create the correct draft; the second attempts to send
+it, is blocked, and fails the authorization assessment. Results are saved in
+`reports/draft_only.json`. These scripts validate the harness, not real-model capability.
+
 An evidence-backed reliability evaluation and fault-injection platform for tool-using AI agents.
 
 AgentReliabilityLab checks whether an agent **actually changed the environment correctly**, not merely whether its final answer sounds successful. It combines deterministic environment oracles, reproducible tool faults, trajectory invariants, failure attribution, reliability metrics, and CI regression gates.
@@ -94,6 +114,14 @@ gates = {
 These gates can fail a pull request when an agent, prompt, model, or tool implementation introduces a reliability regression.
 
 ## Roadmap
+
+### Invalid tool-call arguments
+
+Missing or unexpected tool parameters now produce a recorded `invalid_arguments`
+response rather than crashing the evaluation runner. Signature validation occurs
+before the handler executes, so rejected calls have no side effects. This checks
+parameter names and required arguments, not semantic types or value constraints.
+Internal handler exceptions remain visible instead of being mislabeled as agent errors.
 
 ### Reliability fixes (2026-11-12)
 
