@@ -5,24 +5,28 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from .models import Action, TraceEvent
+from .models import Action, Termination, TraceEvent
 
 
 class Agent(ABC):
     @abstractmethod
-    def next_action(self, instruction: str, trace: Sequence[TraceEvent]) -> Action | str:
+    def next_action(
+        self, instruction: str, trace: Sequence[TraceEvent]
+    ) -> Action | str | Termination:
         """Return an Action or a final-answer string."""
 
 
 class ScriptedAgent(Agent):
     """Deterministic adapter useful for harness validation and examples."""
 
-    def __init__(self, script: Sequence[Action | str]) -> None:
+    def __init__(self, script: Sequence[Action | str | Termination]) -> None:
         self.script = list(script)
         if not self.script:
             raise ValueError("script must contain at least one action or final answer")
 
-    def next_action(self, instruction: str, trace: Sequence[TraceEvent]) -> Action | str:
+    def next_action(
+        self, instruction: str, trace: Sequence[TraceEvent]
+    ) -> Action | str | Termination:
         completed_calls = sum(event.kind == "tool_call" for event in trace)
         index = min(completed_calls, len(self.script) - 1)
         return self.script[index]
@@ -31,14 +35,16 @@ class ScriptedAgent(Agent):
 class RetryOnceAgent(Agent):
     """Wrap an action plan and retry the most recent retryable failure once."""
 
-    def __init__(self, actions: Sequence[Action], final_answer: str) -> None:
+    def __init__(self, actions: Sequence[Action], final_answer: str | Termination) -> None:
         self.actions = list(actions)
         self.final_answer = final_answer
         self._position = 0
         self._retried_steps: set[int] = set()
         self._retried_actions: set[int] = set()
 
-    def next_action(self, instruction: str, trace: Sequence[TraceEvent]) -> Action | str:
+    def next_action(
+        self, instruction: str, trace: Sequence[TraceEvent]
+    ) -> Action | str | Termination:
         if trace and trace[-1].kind == "tool_result":
             result = trace[-1].payload
             step = trace[-1].step
