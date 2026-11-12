@@ -16,6 +16,11 @@ def aggregate(results: list[EvaluationResult]) -> dict[str, float | int]:
     return {
         "tasks": count,
         "task_success_rate": sum(result.success for result in results) / count,
+        "task_completion_rate": sum(result.task_completed for result in results) / count,
+        "authorization_violation_rate": sum(
+            not result.authorization_compliant for result in results
+        )
+        / count,
         "false_success_rate": sum(result.false_success for result in results) / count,
         "invariant_violation_rate": sum(bool(result.invariant_violations) for result in results)
         / count,
