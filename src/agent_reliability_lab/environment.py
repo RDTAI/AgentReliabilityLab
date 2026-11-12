@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from inspect import signature
 from typing import Any
 
 from .faults import FaultPlan, injected_response
@@ -20,6 +21,7 @@ class VirtualOffice:
         self.files = dict(files or {})
         self.contacts = dict(contacts or {})
         self.sent_emails: list[dict[str, Any]] = []
+        self.drafts: list[dict[str, Any]] = []
         self.fault_plan = fault_plan or FaultPlan.none()
         self.call_counts: dict[str, int] = {}
 
@@ -34,6 +36,15 @@ class VirtualOffice:
         handler = getattr(self, f"_tool_{tool}", None)
         if handler is None:
             return {"ok": False, "error": "unknown_tool", "retryable": False}
+        try:
+            signature(handler).bind(**arguments)
+        except TypeError as exc:
+            return {
+                "ok": False,
+                "error": "invalid_arguments",
+                "message": str(exc),
+                "retryable": False,
+            }
         result = handler(**arguments)
 
         # The side effect happened, but the caller sees a timeout. This catches
@@ -76,5 +87,10 @@ class VirtualOffice:
             "files": deepcopy(self.files),
             "contacts": deepcopy(self.contacts),
             "sent_emails": deepcopy(self.sent_emails),
+            "drafts": deepcopy(self.drafts),
             "call_counts": deepcopy(self.call_counts),
         }
+
+    def _tool_create_draft(self, recipient: str, subject: str, body: str) -> dict[str, Any]:
+        self.drafts.append({"recipient": recipient, "subject": subject, "body": body})
+        return {"ok": True, "result": {"draft_id": f"draft-{len(self.drafts)}"}}
