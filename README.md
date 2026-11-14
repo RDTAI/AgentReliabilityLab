@@ -115,6 +115,13 @@ These gates can fail a pull request when an agent, prompt, model, or tool implem
 
 ## Roadmap
 
+### State-oracle evidence validation
+
+Absent paths and missing dictionary keys no longer match an expected JSON null.
+Explicitly present null values still match. Nested dictionary expectations use
+recursive partial matching; list paths accept only nonnegative decimal indices.
+These checks prevent false task-completion passes when evidence is absent.
+
 ### Invalid tool-call arguments
 
 Missing or unexpected tool parameters now produce a recorded `invalid_arguments`
