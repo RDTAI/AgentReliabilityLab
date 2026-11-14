@@ -8,19 +8,23 @@ from .agents import Agent
 from .environment import VirtualOffice
 from .models import Action, EvaluationResult, TaskSpec, Termination, TraceEvent
 
+_MISSING = object()
+
 
 def _path_value(state: dict[str, Any], path: str) -> Any:
     value: Any = state
     for part in path.split("."):
         try:
             if isinstance(value, list):
+                if not part.isdecimal():
+                    return _MISSING
                 value = value[int(part)]
             elif isinstance(value, dict):
                 value = value[part]
             else:
-                return None
+                return _MISSING
         except (IndexError, KeyError, ValueError):
-            return None
+            return _MISSING
     return value
 
 
@@ -115,8 +119,13 @@ class ReliabilityEvaluator:
 
     @staticmethod
     def _matches(actual: Any, expected: Any) -> bool:
+        if actual is _MISSING:
+            return False
         if isinstance(expected, dict) and isinstance(actual, dict):
-            return all(actual.get(key) == value for key, value in expected.items())
+            return all(
+                ReliabilityEvaluator._matches(actual.get(key, _MISSING), value)
+                for key, value in expected.items()
+            )
         return actual == expected
 
     @staticmethod
