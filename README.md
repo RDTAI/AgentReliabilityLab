@@ -113,6 +113,14 @@ gates = {
 
 These gates can fail a pull request when an agent, prompt, model, or tool implementation introduces a reliability regression.
 
+Gates fail closed: missing metrics and non-finite values (`NaN`, positive or negative
+infinity) produce explicit failures. An evaluation with `tasks=0` cannot pass, even
+with no configured gates. Bounds are inclusive. Empty policies, unknown bound keys,
+non-finite bounds, and reversed ranges raise `ValueError` as configuration errors.
+This prevents broken metric computation or an accidentally empty benchmark from
+producing a green reliability check. Custom metric dictionaries should include
+`tasks` so the empty-evaluation safeguard can apply.
+
 ## Roadmap
 
 ### State-oracle evidence validation
