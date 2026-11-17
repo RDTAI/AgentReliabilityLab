@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -31,24 +32,44 @@ def aggregate(results: list[EvaluationResult]) -> dict[str, float | int]:
 
 
 def regression_failures(
-    metrics: dict[str, float | int], gates: dict[str, dict[str, float]]
+    metrics: dict[str, float | int],
+    gates: dict[str, dict[str, float]],
+    *,
+    min_tasks: int | None = None,
 ) -> list[str]:
     """Fail closed on missing evidence; reject malformed gate configuration."""
+    if min_tasks is not None and (
+        isinstance(min_tasks, bool) or not isinstance(min_tasks, int) or min_tasks < 1
+    ):
+        raise ValueError("min_tasks must be a positive integer")
     for metric, policy in gates.items():
-        if not policy or set(policy) - {"min", "max"}:
+        if not isinstance(policy, dict) or not policy or set(policy) - {"min", "max"}:
             raise ValueError(f"Invalid gate for {metric}: use min and/or max")
-        if any(isinstance(bound, bool) or not math.isfinite(bound) for bound in policy.values()):
+        if any(
+            isinstance(bound, bool) or not isinstance(bound, Real) or not math.isfinite(bound)
+            for bound in policy.values()
+        ):
             raise ValueError(f"Invalid gate for {metric}: bounds must be finite numbers")
         if "min" in policy and "max" in policy and policy["min"] > policy["max"]:
             raise ValueError(f"Invalid gate for {metric}: min exceeds max")
     failures: list[str] = []
-    if metrics.get("tasks") == 0:
+    count = metrics.get("tasks")
+    valid_count = isinstance(count, int) and not isinstance(count, bool) and count >= 0
+    if ("tasks" in metrics or min_tasks is not None) and not valid_count:
+        failures.append("tasks: a nonnegative integer task count is required")
+    elif count == 0:
         failures.append("No evaluation tasks: reliability gates cannot pass without evidence")
+    elif min_tasks is not None and count < min_tasks:
+        failures.append(f"tasks={count} is below minimum sample size {min_tasks}")
     for metric, policy in gates.items():
         if metric not in metrics:
             failures.append(f"{metric}: metric is missing")
             continue
-        value = float(metrics[metric])
+        raw_value = metrics[metric]
+        if isinstance(raw_value, bool) or not isinstance(raw_value, Real):
+            failures.append(f"{metric}: metric must be a real number")
+            continue
+        value = float(raw_value)
         if not math.isfinite(value):
             failures.append(f"{metric}: metric must be finite")
             continue

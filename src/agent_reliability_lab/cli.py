@@ -13,7 +13,7 @@ from .models import Action, TaskSpec, Termination
 from .reporting import aggregate, regression_failures, write_report
 
 
-def demo(output: str, inject_fault: bool) -> int:
+def demo(output: str, inject_fault: bool, min_tasks: int = 1) -> int:
     faults = (
         FaultPlan([FaultRule("search_files", 1, "timeout")]) if inject_fault else FaultPlan.none()
     )
@@ -56,6 +56,7 @@ def demo(output: str, inject_fault: bool) -> int:
     failures = regression_failures(
         metrics,
         {"task_success_rate": {"min": 1.0}, "false_success_rate": {"max": 0.0}},
+        min_tasks=min_tasks,
     )
     if failures:
         print("Regression gate failed:")
@@ -64,12 +65,24 @@ def demo(output: str, inject_fault: bool) -> int:
     return 0
 
 
+def positive_integer(value: str) -> int:
+    """Reject invalid sample budgets before running any evaluation."""
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be a positive integer") from error
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate tool-using agent reliability")
     parser.add_argument("--output", default="reports/demo.json")
     parser.add_argument("--inject-fault", action="store_true")
+    parser.add_argument("--min-tasks", type=positive_integer, default=1)
     args = parser.parse_args()
-    raise SystemExit(demo(args.output, args.inject_fault))
+    raise SystemExit(demo(args.output, args.inject_fault, args.min_tasks))
 
 
 if __name__ == "__main__":
