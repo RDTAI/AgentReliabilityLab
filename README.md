@@ -121,6 +121,28 @@ This prevents broken metric computation or an accidentally empty benchmark from
 producing a green reliability check. Custom metric dictionaries should include
 `tasks` so the empty-evaluation safeguard can apply.
 
+For a benchmark, require a minimum number of evaluated tasks explicitly:
+
+```python
+failures = regression_failures(metrics, gates, min_tasks=100)
+```
+
+Even perfect scores fail this gate when fewer than 100 tasks were evaluated.
+`min_tasks` must be a positive integer; when set, a missing task count fails.
+Any supplied `tasks` value must be a nonnegative integer (booleans are rejected).
+The default `None` preserves support for custom metric dictionaries without counts.
+Metric values must be real numbers: strings, booleans, and null values produce
+diagnostic failures; malformed threshold types raise `ValueError`.
+The sample-size requirement is a deterministic policy, not a confidence interval
+or a guarantee that tasks are independent or representative. The one-task CLI
+demo remains a smoke test and does not enable this benchmark requirement.
+
+The CLI now accepts `agentlab --min-tasks 2`. Because its demo evaluates exactly
+one task, this deliberately exits with status 1 while retaining the JSON report.
+The default is 1, preserving the smoke test. Invalid budgets exit with argparse
+status 2 before execution. This option checks the count; it does not generate
+additional tasks. Subprocess tests verify all three CLI outcomes (0, 1, and 2).
+
 ## Roadmap
 
 ### State-oracle evidence validation
