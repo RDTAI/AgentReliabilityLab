@@ -183,3 +183,12 @@ This is an evaluation research prototype. It runs only simulated tools and does 
 ## License
 
 MIT
+
+### Evidence retention on CLI gate failures
+
+CLI subprocess regression tests verify that a failed sample-size gate creates a
+parseable report in a fresh nested directory and replaces a stale report with
+current task evidence. They check task count, task identity, success, and injected
+fault retry metrics, rather than treating file existence as proof of a fresh run.
+Gate failure means the benchmark policy failed; individual tasks can still succeed.
+These tests do not claim report writes are atomic under process interruption.
